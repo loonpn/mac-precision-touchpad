@@ -6,18 +6,13 @@ on:
   workflow_dispatch:
 
 env:
-  # ---- 项目路径 ----
   PROJECT_FILE: src/AmtPtpDeviceUsbUm/MagicTrackpad2PtpDevice.vcxproj
-  DRIVER_NAME: MagicTrackpad2PtpDevice          # 输出 dll 名（通常与工程名一致）
+  DRIVER_NAME: MagicTrackpad2PtpDevice
   CONFIGURATION: Release
   PLATFORM: x64
-  # ---- WDK / SDK 版本 ----
-  # 1607 RS1 SDK 版本号为 10.0.14393.0
-  WIN_TARGET_PLATFORM: 10.0.14393.0
 
 jobs:
   build:
-    # windows-2019 内置较旧的工具链，与 1607 WDK 兼容性更好
     runs-on: windows-2022
 
     steps:
@@ -37,9 +32,25 @@ jobs:
         Write-Host "WDK installation finished."
       shell: pwsh
 
-    # =====================================================================
-    # 编译用户模式驱动 (UMDF)
-    # =====================================================================
+    - name: Get latest installed Windows SDK version
+      run: |
+        $sdkIncludeRoot = "C:\Program Files (x86)\Windows Kits\10\Include"
+        if (-not (Test-Path $sdkIncludeRoot)) {
+          Write-Error "No Windows Kits Include directory found."
+          exit 1
+        }
+        $versions = Get-ChildItem $sdkIncludeRoot -Directory |
+                    Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+                    Sort-Object { [version]$_.Name } -Descending
+        if (-not $versions) {
+          Write-Error "No Windows SDK versions found in $sdkIncludeRoot"
+          exit 1
+        }
+        $latestSdk = $versions[0].Name
+        Write-Host "Latest installed SDK: $latestSdk"
+        Add-Content -Path $env:GITHUB_ENV -Value "WIN_TARGET_PLATFORM=$latestSdk"
+      shell: pwsh
+
     - name: Build UMDF Driver
       run: |
         msbuild $env:PROJECT_FILE `
@@ -48,15 +59,10 @@ jobs:
           /p:WindowsTargetPlatformVersion=$env:WIN_TARGET_PLATFORM
       shell: pwsh
 
-    # =====================================================================
-    # 收集输出文件（.dll, .inf, .pdb 等）
-    # 通常 UMDF 驱动输出目录为项目下的 Release\x64 或基于 OutDir
-    # =====================================================================
     - name: Collect build outputs
       run: |
         $buildOutDir = "src/AmtPtpDeviceUsbUm/$env:CONFIGURATION/$env:PLATFORM"
         if (-not (Test-Path $buildOutDir)) {
-          # 备选路径（某些工程设置）
           $buildOutDir = "src/AmtPtpDeviceUsbUm/build/$env:DRIVER_NAME/$env:PLATFORM/$env:CONFIGURATION"
         }
         if (-not (Test-Path $buildOutDir)) {
@@ -66,11 +72,9 @@ jobs:
         Write-Host "Build output found at: $buildOutDir"
         Get-ChildItem $buildOutDir -Recurse
 
-        # 创建打包目录
         $packageDir = "package"
         New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
 
-        # 复制 dll
         $dll = Get-ChildItem -Path $buildOutDir -Filter "$env:DRIVER_NAME.dll" -Recurse | Select-Object -First 1
         if (-not $dll) {
           Write-Error "Could not find $env:DRIVER_NAME.dll"
@@ -78,11 +82,9 @@ jobs:
         }
         Copy-Item $dll.FullName $packageDir -Force
 
-        # 复制 pdb (可选)
         $pdb = Get-ChildItem -Path $buildOutDir -Filter "*.pdb" -Recurse | Select-Object -First 1
         if ($pdb) { Copy-Item $pdb.FullName $packageDir -Force }
 
-        # 复制 inf 文件（从驱动包项目获取通用 inf）
         $infPath = "src/AmtPtpDeviceUniversalPkg/AmtPtpDevice.inf"
         if (Test-Path $infPath) {
           Copy-Item $infPath $packageDir -Force
@@ -90,15 +92,11 @@ jobs:
           Write-Warning "INF file not found at $infPath. The driver package will be incomplete."
         }
 
-        # 列出最终包内容
         Write-Host "Packaged files:"
         Get-ChildItem $packageDir
         Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_DIR=$packageDir"
       shell: pwsh
 
-    # =====================================================================
-    # 上传构建产物（未签名）
-    # =====================================================================
     - name: Upload driver package artifact
       uses: actions/upload-artifact@v4
       with:
