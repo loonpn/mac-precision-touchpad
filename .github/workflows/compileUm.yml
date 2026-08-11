@@ -219,6 +219,31 @@ jobs:
           -ErrorAction SilentlyContinue
 
     ############################################################
+    # Verify WDF Headers
+    ############################################################
+    - name: Verify WDF Headers
+      shell: powershell
+      run: |
+    
+        Write-Host "========== Searching wdf.h =========="
+    
+        Get-ChildItem `
+          "C:\Program Files (x86)\Windows Kits\10\Include" `
+          -Recurse `
+          -Filter wdf.h |
+          Select-Object FullName
+    
+    
+        Write-Host ""
+        Write-Host "========== WDK Build Targets =========="
+    
+        Get-ChildItem `
+          "C:\Program Files (x86)\Windows Kits\10\build" `
+          -Recurse `
+          -Filter *.props |
+          Select-Object FullName
+
+    ############################################################
     # Build
     ############################################################
     - name: Build Driver x64 ReleaseSigned
@@ -240,13 +265,24 @@ jobs:
         Write-Host $msbuild
     
     
+        Write-Host "========== Build Driver =========="
+    
+        Write-Host "MSBuild:"
+        Write-Host $msbuild
+    
+    
+        Write-Host ""
+        Write-Host "Forcing WDK UMDF toolset"
+    
+    
         & "$msbuild" `
           src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj `
           /m `
           /v:detailed `
           /p:Configuration=ReleaseSigned `
           /p:Platform=x64 `
-          /p:WindowsTargetPlatformVersion=10.0.14393.0
+          /p:WindowsTargetPlatformVersion=10.0.14393.0 `
+          /p:PlatformToolset=WindowsUserModeDriver10.0
 
     ############################################################
     # Collect artifacts
