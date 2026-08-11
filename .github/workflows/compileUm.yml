@@ -166,7 +166,7 @@ jobs:
         curl.exe `
           -L `
           -o winsdk_14393.exe `
-          https://go.microsoft.com/fwlink/p/?LinkId=845298
+          https://go.microsoft.com/fwlink/p/?LinkId=838916
     
     
         Write-Host "Installer:"
