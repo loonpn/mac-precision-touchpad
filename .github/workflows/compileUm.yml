@@ -8,21 +8,26 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # 1. 安装 VS 2015 Build Tools
     - name: Install VS 2015 Build Tools
       run: |
-        choco install visualstudio2015buildtools -y
-        choco install visualstudio2015-workload-vctools -y
+        curl -L -o vs_BuildTools.exe https://download.microsoft.com/download/5/F/5/5F5B87D6-0B51-482B-94C3-0911D1D1F1AE/vs_BuildTools.exe
+        .\vs_BuildTools.exe /quiet /norestart /InstallSelectableItems VisualCppBuildTools_AMD64
 
+    # 2. 安装 Windows SDK 10.0.14393（必须，因为 WDK 依赖它）
     - name: Install SDK 14393
       run: |
         curl -L -o sdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=838916
         .\sdk_14393.exe /quiet /norestart
 
+    # 3. 安装 WDK 10.0.14393（需自行提供可靠下载源）
     - name: Install WDK 14393
       run: |
+        # 假设你已经将 WDK 安装包托管在某个可访问的 URL，或使用存档链接
         curl -L -o wdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=526733
         .\wdk_14393.exe /quiet /norestart
 
+    # 4. 构建驱动（根据你的项目配置）
     - name: Build Driver (x64 ReleaseSigned)
       run: |
         msbuild src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj /p:Configuration=ReleaseSigned /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.14393.0
