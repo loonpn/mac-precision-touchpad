@@ -157,6 +157,33 @@ jobs:
     
         & "$msbuild" -version
 
+    - name: Install Windows SDK 14393
+      shell: powershell
+      run: |
+    
+        Write-Host "Downloading Windows SDK 14393..."
+    
+        curl.exe `
+          -L `
+          -o winsdk_14393.exe `
+          https://go.microsoft.com/fwlink/p/?LinkId=845298
+    
+    
+        Write-Host "Installer:"
+        Get-Item .\winsdk_14393.exe |
+          Select Name,Length
+    
+    
+        Write-Host "Installing SDK..."
+    
+        Start-Process `
+          .\winsdk_14393.exe `
+          -ArgumentList "/quiet","/norestart" `
+          -Wait
+    
+    
+        Write-Host "SDK installation finished"
+
     - name: Check Windows SDK Versions
       shell: powershell
       run: |
