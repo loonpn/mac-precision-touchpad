@@ -83,7 +83,6 @@
     <PlatformToolset>WindowsUserModeDriver10.0</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
-    <UMDF_VERSION_MINOR>0</UMDF_VERSION_MINOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSigned|x64'" Label="Configuration">
@@ -143,13 +142,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSigned|x64'">
     <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
     <OutDir>$(SolutionDir)build\$(ProjectName)\$(Platform)\$(ConfigurationName)\</OutDir>
-    <IncludePath>
+    <AdditionalIncludeDirectories>
     $(ProjectDir)include;
     $(ProjectDir);
-    $(DDK_INC_PATH);
-    $(SolutionDir)intermediate\$(Platform)\$(ConfigurationName)\;
-    $(VC_IncludePath)
-    </IncludePath>
+    C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.0;
+    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\um;
+    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\shared;
+    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\ucrt;
+    %(AdditionalIncludeDirectories)
+    </AdditionalIncludeDirectories>
+    <IncludePath>$(DDK_INC_PATH);$(SolutionDir)intermediate\$(Platform)\$(ConfigurationName)\;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <IntDir>$(SolutionDir)intermediate\$(ProjectName)\$(Platform)\$(ConfigurationName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
