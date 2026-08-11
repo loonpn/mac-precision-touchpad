@@ -157,7 +157,39 @@ jobs:
     
         & "$msbuild" -version
 
-
+    - name: Check Windows SDK Versions
+      shell: powershell
+      run: |
+    
+        Write-Host "========== Installed SDKs =========="
+    
+        $sdkRoot = "C:\Program Files (x86)\Windows Kits\10"
+    
+        if (Test-Path $sdkRoot) {
+    
+            Get-ChildItem "$sdkRoot\Include" |
+                Select-Object Name
+    
+        } else {
+    
+            Write-Error "Windows Kits not found"
+            exit 1
+        }
+    
+    
+        Write-Host ""
+        Write-Host "========== Registry SDK List =========="
+    
+        reg query `
+          "HKLM\SOFTWARE\Microsoft\Windows Kits\Installed Roots"
+    
+    
+        Write-Host ""
+        Write-Host "========== WDK =========="
+    
+        Get-ChildItem `
+          "$sdkRoot\bin" `
+          -ErrorAction SilentlyContinue
 
     ############################################################
     # Build
