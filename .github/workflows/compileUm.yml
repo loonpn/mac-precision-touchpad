@@ -1,104 +1,28 @@
-name: Build UsbUm Driver
+name: Build UMDF Driver for 14393
 
-on:
-  push:
-    branches: [ master ]
-  workflow_dispatch:
-
-env:
-  PROJECT_FILE: src/AmtPtpDeviceUsbUm/MagicTrackpad2PtpDevice.vcxproj
-  DRIVER_NAME: MagicTrackpad2PtpDevice
-  CONFIGURATION: Release
-  PLATFORM: x64
+on: [push]
 
 jobs:
   build:
     runs-on: windows-2022
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Add MSBuild to PATH
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Install WDK 1607 (RS1)
+    - name: Install VS 2015 Build Tools
       run: |
-        $wdkUrl = "https://go.microsoft.com/fwlink/p/?LinkID=324284"
-        $wdkInstaller = "$env:TEMP\wdksetup.exe"
-        Write-Host "Downloading WDK 1607..."
-        Invoke-WebRequest -Uri $wdkUrl -OutFile $wdkInstaller
-        Write-Host "Installing WDK silently..."
-        Start-Process -FilePath $wdkInstaller -ArgumentList "/quiet /norestart" -Wait
-        Write-Host "WDK installation finished."
-      shell: pwsh
+        choco install visualstudio2015buildtools -y
+        choco install visualstudio2015-workload-vctools -y
 
-    - name: Get latest installed Windows SDK version
+    - name: Install SDK 14393
       run: |
-        $sdkIncludeRoot = "C:\Program Files (x86)\Windows Kits\10\Include"
-        if (-not (Test-Path $sdkIncludeRoot)) {
-          Write-Error "No Windows Kits Include directory found."
-          exit 1
-        }
-        $versions = Get-ChildItem $sdkIncludeRoot -Directory |
-                    Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
-                    Sort-Object { [version]$_.Name } -Descending
-        if (-not $versions) {
-          Write-Error "No Windows SDK versions found in $sdkIncludeRoot"
-          exit 1
-        }
-        $latestSdk = $versions[0].Name
-        Write-Host "Latest installed SDK: $latestSdk"
-        Add-Content -Path $env:GITHUB_ENV -Value "WIN_TARGET_PLATFORM=$latestSdk"
-      shell: pwsh
+        curl -L -o sdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=838916
+        .\sdk_14393.exe /quiet /norestart
 
-    - name: Build UMDF Driver
+    - name: Install WDK 14393
       run: |
-        msbuild $env:PROJECT_FILE `
-          /p:Configuration=$env:CONFIGURATION `
-          /p:Platform=$env:PLATFORM `
-          /p:WindowsTargetPlatformVersion=$env:WIN_TARGET_PLATFORM
-      shell: pwsh
+        curl -L -o wdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=526733
+        .\wdk_14393.exe /quiet /norestart
 
-    - name: Collect build outputs
+    - name: Build Driver (x64 ReleaseSigned)
       run: |
-        $buildOutDir = "src/AmtPtpDeviceUsbUm/$env:CONFIGURATION/$env:PLATFORM"
-        if (-not (Test-Path $buildOutDir)) {
-          $buildOutDir = "src/AmtPtpDeviceUsbUm/build/$env:DRIVER_NAME/$env:PLATFORM/$env:CONFIGURATION"
-        }
-        if (-not (Test-Path $buildOutDir)) {
-          Write-Error "Cannot find build output directory. Searched: $buildOutDir"
-          exit 1
-        }
-        Write-Host "Build output found at: $buildOutDir"
-        Get-ChildItem $buildOutDir -Recurse
-
-        $packageDir = "package"
-        New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
-
-        $dll = Get-ChildItem -Path $buildOutDir -Filter "$env:DRIVER_NAME.dll" -Recurse | Select-Object -First 1
-        if (-not $dll) {
-          Write-Error "Could not find $env:DRIVER_NAME.dll"
-          exit 1
-        }
-        Copy-Item $dll.FullName $packageDir -Force
-
-        $pdb = Get-ChildItem -Path $buildOutDir -Filter "*.pdb" -Recurse | Select-Object -First 1
-        if ($pdb) { Copy-Item $pdb.FullName $packageDir -Force }
-
-        $infPath = "src/AmtPtpDeviceUniversalPkg/AmtPtpDevice.inf"
-        if (Test-Path $infPath) {
-          Copy-Item $infPath $packageDir -Force
-        } else {
-          Write-Warning "INF file not found at $infPath. The driver package will be incomplete."
-        }
-
-        Write-Host "Packaged files:"
-        Get-ChildItem $packageDir
-        Add-Content -Path $env:GITHUB_ENV -Value "PACKAGE_DIR=$packageDir"
-      shell: pwsh
-
-    - name: Upload driver package artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: AmtPtpDeviceUsbUm-${{ github.sha }}
-        path: ${{ env.PACKAGE_DIR }}
+        msbuild src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj /p:Configuration=ReleaseSigned /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.14393.0
