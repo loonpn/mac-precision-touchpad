@@ -18,7 +18,7 @@ env:
 jobs:
   build:
     # windows-2019 内置较旧的工具链，与 1607 WDK 兼容性更好
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
     - uses: actions/checkout@v4
