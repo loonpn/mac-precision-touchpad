@@ -1,43 +1,195 @@
-name: Build UMDF Driver for 14393
+name: Build UMDF Driver WDK 14393
 
-on: [push]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build Driver
     runs-on: windows-2022
+
     steps:
-    - uses: actions/checkout@v4
 
-    - name: Install Visual C++ 2015 Build Tools
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+
+    ############################################################
+    # Show runner environment
+    ############################################################
+    - name: Show Build Environment
+      shell: powershell
       run: |
-        curl -L -o vs_buildtools.exe https://download.microsoft.com/download/5/f/7/5f7acaeb-8363-451f-9425-68a90f98b238/visualcppbuildtools_full.exe
-        .\vs_buildtools.exe /quiet /norestart
+        Write-Host "========== OS =========="
+        systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
 
-    - name: Install SDK 14393
-      run: |
-        curl -L -o sdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=838916
-        .\sdk_14393.exe /quiet /norestart
+        Write-Host ""
+        Write-Host "========== PowerShell =========="
+        $PSVersionTable
 
+        Write-Host ""
+        Write-Host "========== Existing Visual Studio =========="
+        Get-ChildItem `
+          "C:\Program Files\Microsoft Visual Studio\2022" `
+          -ErrorAction SilentlyContinue
+
+
+    ############################################################
+    # Install old WDK 14393
+    ############################################################
     - name: Install WDK 14393
+      shell: powershell
       run: |
-        curl -L -o wdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=526733
-        .\wdk_14393.exe /quiet /norestart
 
-    - name: Verify Environment
+        Write-Host "Downloading WDK 14393..."
+
+        curl.exe `
+          -L `
+          -o wdk_14393.exe `
+          https://go.microsoft.com/fwlink/p/?LinkId=526733
+
+
+        Write-Host "WDK installer size:"
+        Get-Item .\wdk_14393.exe |
+          Select-Object Name,Length
+
+
+        Write-Host "Installing WDK..."
+
+        Start-Process `
+          .\wdk_14393.exe `
+          -ArgumentList "/quiet","/norestart" `
+          -Wait `
+          -PassThru
+
+
+        Write-Host "WDK installer finished"
+
+
+    ############################################################
+    # Verify SDK / WDK
+    ############################################################
+    - name: Verify WDK Installation
+      shell: powershell
       run: |
-        if (Test-Path "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\cl.exe") {
-          Write-Host "✅ VS2015 found"
+
+        Write-Host "========== Windows Kits =========="
+
+        Get-ChildItem `
+          "C:\Program Files (x86)\Windows Kits\10\Include"
+
+
+        Write-Host ""
+        Write-Host "Checking 14393 SDK..."
+
+        if (Test-Path `
+          "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0") {
+
+            Write-Host "OK: SDK 14393 found"
+
         } else {
-          Write-Error "❌ VS2015 not found"
-          exit 1
-        }
-        if (Test-Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0") {
-          Write-Host "✅ WDK found"
-        } else {
-          Write-Error "❌ WDK not found"
-          exit 1
+
+            Write-Error "FAILED: SDK 14393 missing"
+            exit 1
         }
 
-    - name: Build Driver (x64 ReleaseSigned)
+
+        Write-Host ""
+        Write-Host "========== WDK tools =========="
+
+        Get-ChildItem `
+          "C:\Program Files (x86)\Windows Kits\10\bin\10.0.14393.0" `
+          -ErrorAction SilentlyContinue
+
+
+    ############################################################
+    # Verify MSBuild
+    ############################################################
+    - name: Verify Visual Studio Build Tools
+      shell: powershell
       run: |
-        msbuild src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj /p:Configuration=ReleaseSigned /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.14393.0
+
+        Write-Host "Searching MSBuild..."
+
+        where.exe msbuild
+
+
+        Write-Host ""
+        Write-Host "MSBuild version:"
+
+        msbuild -version
+
+
+        Write-Host ""
+        Write-Host "VS installation:"
+
+        Get-ChildItem `
+          "C:\Program Files\Microsoft Visual Studio\2022" `
+          -Recurse `
+          -Filter MSBuild.exe `
+          -ErrorAction SilentlyContinue
+
+
+
+    ############################################################
+    # Build
+    ############################################################
+    - name: Build Driver x64 ReleaseSigned
+      shell: powershell
+      run: |
+
+        Write-Host "========== Build Parameters =========="
+        Write-Host "Configuration : ReleaseSigned"
+        Write-Host "Platform      : x64"
+        Write-Host "Target SDK    : 10.0.14393.0"
+
+
+        $project = `
+          "src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj"
+
+
+        Write-Host ""
+        Write-Host "Project:"
+        Get-Item $project
+
+
+        Write-Host ""
+        Write-Host "========== Starting MSBuild =========="
+
+
+        msbuild $project `
+          /m `
+          /v:detailed `
+          /p:Configuration=ReleaseSigned `
+          /p:Platform=x64 `
+          /p:WindowsTargetPlatformVersion=10.0.14393.0
+
+
+        if ($LASTEXITCODE -ne 0) {
+
+          Write-Error "Driver build failed"
+          exit $LASTEXITCODE
+        }
+
+
+        Write-Host ""
+        Write-Host "========== Build Success =========="
+
+
+
+    ############################################################
+    # Collect artifacts
+    ############################################################
+    - name: List Build Output
+      if: always()
+      shell: powershell
+      run: |
+
+        Write-Host "Searching output files..."
+
+        Get-ChildItem `
+          -Path . `
+          -Include *.sys,*.cat,*.inf `
+          -Recurse `
+          -ErrorAction SilentlyContinue
