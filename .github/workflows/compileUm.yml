@@ -8,15 +8,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install VS2015 Community (extract ISO)
+    - name: Install Visual C++ 2015 Build Tools
       run: |
-        curl -L -o vs2015.iso http://download.microsoft.com/download/B/4/8/B4870509-05CB-447C-878F-2F80E4CB464C/vs2015.com_chs.iso
-        mkdir vs2015_extracted
-        & "C:\Program Files\7-Zip\7z.exe" x vs2015.iso -ovs2015_extracted -y
-        cd vs2015_extracted
-        .\vs_community.exe /quiet /norestart /InstallSelectableItems VisualCppBuildTools_AMD64
-        cd ..
-        Remove-Item -Recurse -Force vs2015_extracted
+        curl -L -o vs_buildtools.exe https://download.microsoft.com/download/5/f/7/5f7acaeb-8363-451f-9425-68a90f98b238/visualcppbuildtools_full.exe
+        .\vs_buildtools.exe /quiet /norestart
 
     - name: Install SDK 14393
       run: |
