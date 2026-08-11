@@ -11,7 +11,7 @@ jobs:
     # 1. 安装 VS 2015 Build Tools
     - name: Install VS 2015 Build Tools
       run: |
-        curl -L -o vs_BuildTools.exe https://download.microsoft.com/download/5/F/5/5F5B87D6-0B51-482B-94C3-0911D1D1F1AE/vs_BuildTools.exe
+        curl -L -o vs_BuildTools.exe https://download.microsoft.com/download/e/e/d/eedf18a8-4aed-4ce0-bebe-70a83094fc5a/BuildTools_Full.exe
         .\vs_BuildTools.exe /quiet /norestart /InstallSelectableItems VisualCppBuildTools_AMD64
 
     # 2. 安装 Windows SDK 10.0.14393（必须，因为 WDK 依赖它）
