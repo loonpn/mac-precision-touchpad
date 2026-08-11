@@ -110,25 +110,44 @@ jobs:
       shell: powershell
       run: |
 
-        Write-Host "Searching MSBuild..."
+        Write-Host "========== Locate Visual Studio =========="
 
-        where.exe msbuild
+        $vswhere = `
+          "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+
+
+        if (!(Test-Path $vswhere)) {
+
+          Write-Error "vswhere.exe not found"
+          exit 1
+
+        }
+
+
+        $msbuild = & $vswhere `
+          -latest `
+          -products * `
+          -requires Microsoft.Component.MSBuild `
+          -find MSBuild\**\Bin\MSBuild.exe
 
 
         Write-Host ""
-        Write-Host "MSBuild version:"
+        Write-Host "MSBuild candidates:"
+        $msbuild
 
-        msbuild -version
+
+        if (!$msbuild) {
+
+          Write-Error "MSBuild not found"
+          exit 1
+
+        }
 
 
         Write-Host ""
-        Write-Host "VS installation:"
+        Write-Host "Testing MSBuild..."
 
-        Get-ChildItem `
-          "C:\Program Files\Microsoft Visual Studio\2022" `
-          -Recurse `
-          -Filter MSBuild.exe `
-          -ErrorAction SilentlyContinue
+        & $msbuild[0] -version
 
 
 
@@ -139,44 +158,36 @@ jobs:
       shell: powershell
       run: |
 
-        Write-Host "========== Build Parameters =========="
-        Write-Host "Configuration : ReleaseSigned"
-        Write-Host "Platform      : x64"
-        Write-Host "Target SDK    : 10.0.14393.0"
+        $vswhere = `
+          "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 
 
-        $project = `
-          "src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj"
+        $msbuild = & $vswhere `
+          -latest `
+          -products * `
+          -requires Microsoft.Component.MSBuild `
+          -find MSBuild\**\Bin\MSBuild.exe
 
 
-        Write-Host ""
-        Write-Host "Project:"
-        Get-Item $project
+        if (!$msbuild) {
+
+          Write-Error "MSBuild missing"
+          exit 1
+
+        }
 
 
-        Write-Host ""
-        Write-Host "========== Starting MSBuild =========="
+        Write-Host "Using MSBuild:"
+        Write-Host $msbuild[0]
 
 
-        msbuild $project `
+        & $msbuild[0] `
+          src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj `
           /m `
           /v:detailed `
           /p:Configuration=ReleaseSigned `
           /p:Platform=x64 `
           /p:WindowsTargetPlatformVersion=10.0.14393.0
-
-
-        if ($LASTEXITCODE -ne 0) {
-
-          Write-Error "Driver build failed"
-          exit $LASTEXITCODE
-        }
-
-
-        Write-Host ""
-        Write-Host "========== Build Success =========="
-
-
 
     ############################################################
     # Collect artifacts
