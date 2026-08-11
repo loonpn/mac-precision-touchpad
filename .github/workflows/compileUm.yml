@@ -8,52 +8,41 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # 1. 安装 VS2015 Community（仅安装 VC++ 工具集）
-    - name: Install VS2015 Community (VC++ only)
+    - name: Install VS2015 Community (extract ISO)
       run: |
-        # 下载 ISO（如果仓库中没有，则从互联网下载）
         curl -L -o vs2015.iso http://download.microsoft.com/download/B/4/8/B4870509-05CB-447C-878F-2F80E4CB464C/vs2015.com_chs.iso
+        mkdir vs2015_extracted
+        & "C:\Program Files\7-Zip\7z.exe" x vs2015.iso -ovs2015_extracted -y
+        cd vs2015_extracted
+        .\vs_community.exe /quiet /norestart /InstallSelectableItems VisualCppBuildTools_AMD64
+        cd ..
+        Remove-Item -Recurse -Force vs2015_extracted
 
-        # 挂载 ISO
-        $mount = Mount-DiskImage -ImagePath "$env:GITHUB_WORKSPACE\vs2015.iso" -PassThru
-        $driveLetter = ($mount | Get-Volume).DriveLetter
-        $setupPath = "$driveLetter`:\vs_community.exe"
-
-        # 静默安装，仅选择 Visual C++ 工具集（不包括完整 IDE）
-        & $setupPath /quiet /norestart /InstallSelectableItems VisualCppBuildTools_AMD64
-
-        # 卸载 ISO
-        Dismount-DiskImage -ImagePath "$env:GITHUB_WORKSPACE\vs2015.iso"
-
-    # 2. 安装 Windows SDK 10.0.14393
     - name: Install SDK 14393
       run: |
         curl -L -o sdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=838916
         .\sdk_14393.exe /quiet /norestart
 
-    # 3. 安装 WDK 10.0.14393
     - name: Install WDK 14393
       run: |
         curl -L -o wdk_14393.exe https://go.microsoft.com/fwlink/p/?LinkId=526733
         .\wdk_14393.exe /quiet /norestart
 
-    # 4. 验证关键工具是否存在（可选）
     - name: Verify Environment
       run: |
         if (Test-Path "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\cl.exe") {
-          Write-Host "✅ VS2015 cl.exe found"
+          Write-Host "✅ VS2015 found"
         } else {
-          Write-Error "❌ cl.exe not found"
+          Write-Error "❌ VS2015 not found"
           exit 1
         }
         if (Test-Path "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0") {
-          Write-Host "✅ WDK 14393 found"
+          Write-Host "✅ WDK found"
         } else {
           Write-Error "❌ WDK not found"
           exit 1
         }
 
-    # 5. 构建驱动
     - name: Build Driver (x64 ReleaseSigned)
       run: |
         msbuild src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj /p:Configuration=ReleaseSigned /p:Platform=x64 /p:WindowsTargetPlatformVersion=10.0.14393.0
