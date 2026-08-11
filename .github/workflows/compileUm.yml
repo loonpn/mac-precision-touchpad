@@ -285,10 +285,7 @@ jobs:
         
         
         Write-Host ""
-        Write-Host "Loading WDK env..."
-        
-        
-        cmd /c "`"$wdk\bin\10.0.14393.0\x64\WdfCoInstaller01011.dll`""
+        Write-Host "WDK environment checked"
 
       
         $vswhere = `
@@ -317,11 +314,10 @@ jobs:
     
     
         Write-Host "========== Inject WDK UMDF Environment =========="
-        
-        
-        $env:Include = `
+
+        $env:Include =
         "C:\Program Files (x86)\Windows Kits\10\Include\wdf;" +
-        "C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.15;" +
+        "C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.0;" +
         "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\ucrt;" +
         "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\shared;" +
         "C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\um;" +
@@ -333,14 +329,14 @@ jobs:
         
         
         & "$msbuild" `
-          src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj `
-          /m `
-          /v:detailed `
-          /p:Configuration=ReleaseSigned `
-          /p:Platform=x64 `
-          /p:WindowsTargetPlatformVersion=10.0.14393.0 `
-          /p:IncludePath="C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.15;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\ucrt"
-
+        src\AmtPtpDeviceUsbUm\MagicTrackpad2PtpDevice.vcxproj `
+        /m `
+        /v:detailed `
+        /p:Configuration=ReleaseSigned `
+        /p:Platform=x64 `
+        /p:WindowsTargetPlatformVersion=10.0.14393.0 `
+        '/p:IncludePath=C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.0;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\ucrt'
+        
     ############################################################
     # Collect artifacts
     ############################################################
