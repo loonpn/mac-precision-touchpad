@@ -142,15 +142,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSigned|x64'">
     <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
     <OutDir>$(SolutionDir)build\$(ProjectName)\$(Platform)\$(ConfigurationName)\</OutDir>
-    <AdditionalIncludeDirectories>
-    $(ProjectDir)include;
-    $(ProjectDir);
-    C:\Program Files (x86)\Windows Kits\10\Include\wdf\umdf\2.0;
-    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\um;
-    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\shared;
-    C:\Program Files (x86)\Windows Kits\10\Include\10.0.14393.0\ucrt;
-    %(AdditionalIncludeDirectories)
-    </AdditionalIncludeDirectories>
     <IncludePath>$(DDK_INC_PATH);$(SolutionDir)intermediate\$(Platform)\$(ConfigurationName)\;$(ProjectDir)include;$(IncludePath)</IncludePath>
     <IntDir>$(SolutionDir)intermediate\$(ProjectName)\$(Platform)\$(ConfigurationName)\</IntDir>
   </PropertyGroup>
@@ -171,7 +162,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSigned|ARM64'">
     <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
     <OutDir>$(SolutionDir)build\$(ProjectName)\$(Platform)\$(ConfigurationName)\</OutDir>
-    <IncludePath>$(DDK_INC_PATH);$(SolutionDir)intermediate\$(Platform)\$(ConfigurationName)\;$(ProjectDir)include;$(IncludePath)</IncludePath>
+    <IncludePath>$(DDK_INC_PATH)\wdf\umdf\2.0;$(DDK_INC_PATH);$(SolutionDir)\intermediate\$(Platform)\$(ConfigurationName)\;$(ProjectDir)\include;$(IncludePath)</IncludePath>
     <IntDir>$(SolutionDir)intermediate\$(ProjectName)\$(Platform)\$(ConfigurationName)\</IntDir>
   </PropertyGroup>
   <!-- For release signed config on Azure pipeline, CI pipeline don't sign it. We do that locally -->
